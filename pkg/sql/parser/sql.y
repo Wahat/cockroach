@@ -569,7 +569,7 @@ func newNameFromStr(s string) *tree.Name {
 %token <str> SERIALIZABLE SERVER SESSION SESSIONS SESSION_USER SET SETTING SETTINGS
 %token <str> SHARE SHOW SIMILAR SIMPLE SKIP SMALLINT SMALLSERIAL SNAPSHOT SOME SPLIT SQL
 
-%token <str> START STATISTICS STATUS STDIN STRICT STRING STORE STORED STORING SUBSTRING
+%token <str> START STATISTICS STATUS STDIN STEP STRICT STRING STORE STORED STORING SUBSTRING
 %token <str> SYMMETRIC SYNTAX SYSTEM SUBSCRIPTION
 
 %token <str> TABLE TABLES TEMP TEMPLATE TEMPORARY TESTING_RELOCATE EXPERIMENTAL_RELOCATE TEXT THEN
@@ -892,7 +892,7 @@ func newNameFromStr(s string) *tree.Name {
 %type <bool> opt_unique opt_cluster
 %type <bool> opt_using_gin_btree
 
-%type <*tree.Limit> limit_clause offset_clause opt_limit_clause
+%type <*tree.Limit> limit_clause offset_clause opt_limit_clause step_clause
 %type <tree.Expr> opt_select_fetch_first_value
 %type <empty> row_or_rows
 %type <empty> first_or_next
@@ -6260,7 +6260,24 @@ opt_nulls_order:
 // | a_expr USING math_op {}
 
 select_limit:
-  limit_clause offset_clause
+ limit_clause offset_clause step_clause
+  {
+    if $1.limit() == nil {
+      $$.val = $2.limit()
+    } else {
+      $$.val = $1.limit()
+      $$.val.(*tree.Limit).Offset = $2.limit().Offset
+    }
+  }
+| offset_clause limit_clause step_clause
+  {
+    $$.val = $1.limit()
+    if $2.limit() != nil {
+      $$.val.(*tree.Limit).Count = $2.limit().Count
+      $$.val.(*tree.Limit).LimitAll = $2.limit().LimitAll
+    }
+  }
+| limit_clause offset_clause
   {
     if $1.limit() == nil {
       $$.val = $2.limit()
@@ -6279,6 +6296,7 @@ select_limit:
   }
 | limit_clause
 | offset_clause
+| step_clause
 
 opt_limit_clause:
   limit_clause
@@ -6303,6 +6321,7 @@ limit_clause:
     $$.val = &tree.Limit{Count: $3.expr()}
   }
 
+
 offset_clause:
   OFFSET a_expr
   {
@@ -6314,6 +6333,12 @@ offset_clause:
 | OFFSET c_expr row_or_rows
   {
     $$.val = &tree.Limit{Offset: $2.expr()}
+  }
+
+step_clause:
+  STEP a_expr
+  {
+      $$.val = &tree.Limit{Step: $2.expr()}
   }
 
 // Allowing full expressions without parentheses causes various parsing
@@ -9907,6 +9932,7 @@ reserved_keyword:
 | SELECT
 | SESSION_USER
 | SOME
+| STEP
 | SYMMETRIC
 | TABLE
 | THEN
