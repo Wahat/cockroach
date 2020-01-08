@@ -741,7 +741,7 @@ func (node *Order) Equal(other *Order) bool {
 
 // Limit represents a LIMIT clause.
 type Limit struct {
-	Offset, Count Expr
+	Offset, Count, Step Expr
 	LimitAll      bool
 }
 

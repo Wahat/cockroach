@@ -202,7 +202,7 @@ func (b *Builder) buildRelational(e memo.RelExpr) (execPlan, error) {
 	case *memo.DistinctOnExpr:
 		ep, err = b.buildDistinct(t)
 
-	case *memo.LimitExpr, *memo.OffsetExpr:
+	case *memo.LimitExpr, *memo.OffsetExpr, *memo.StepExpr:
 		ep, err = b.buildLimitOffset(e)
 
 	case *memo.SortExpr:
@@ -1170,9 +1170,11 @@ func (b *Builder) buildLimitOffset(e memo.RelExpr) (execPlan, error) {
 	}
 	var node exec.Node
 	if e.Op() == opt.LimitOp {
-		node, err = b.factory.ConstructLimit(input.root, expr, nil)
-	} else {
-		node, err = b.factory.ConstructLimit(input.root, nil, expr)
+		node, err = b.factory.ConstructLimit(input.root, expr, nil, nil)
+	} else if e.Op() == opt.OffsetOp {
+		node, err = b.factory.ConstructLimit(input.root, nil, expr, nil)
+	} else if e.Op() == opt.StepOp {
+		node, err = b.factory.ConstructLimit(input.root, nil, nil, expr)
 	}
 	if err != nil {
 		return execPlan{}, err
@@ -1205,6 +1207,7 @@ func (b *Builder) buildSort(sort *memo.SortExpr) (execPlan, error) {
 	}
 	return execPlan{root: node, outputCols: input.outputCols}, nil
 }
+
 
 func (b *Builder) buildOrdinality(ord *memo.OrdinalityExpr) (execPlan, error) {
 	input, err := b.buildRelational(ord.Input)

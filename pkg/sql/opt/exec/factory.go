@@ -261,7 +261,9 @@ type Factory interface {
 	// ConstructLimit returns a node that implements LIMIT and/or OFFSET on the
 	// results of the given node. If one or the other is not needed, then it is
 	// set to nil.
-	ConstructLimit(input Node, limit, offset tree.TypedExpr) (Node, error)
+	ConstructLimit(input Node, limit, offset, step tree.TypedExpr) (Node, error)
+
+	ConstructStep(input Node, stepExpr tree.TypedExpr) (Node, error)
 
 	// ConstructMax1Row returns a node that permits at most one row from the
 	// given input node, returning an error at runtime if the node tries to return

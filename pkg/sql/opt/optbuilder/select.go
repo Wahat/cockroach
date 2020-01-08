@@ -824,6 +824,7 @@ func (b *Builder) buildSelect(
 		b.buildLimit(limit, inScope, outScope)
 	}
 
+
 	// TODO(rytaft): Support FILTER expression.
 	return outScope
 }

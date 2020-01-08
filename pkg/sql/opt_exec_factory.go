@@ -727,17 +727,25 @@ func (ef *execFactory) ConstructZigzagJoin(
 
 // ConstructLimit is part of the exec.Factory interface.
 func (ef *execFactory) ConstructLimit(
-	input exec.Node, limit, offset tree.TypedExpr,
+	input exec.Node, limit, offset, step tree.TypedExpr,
 ) (exec.Node, error) {
 	plan := input.(planNode)
 	// If the input plan is also a limitNode that has just an offset, and we are
 	// only applying a limit, update the existing node. This is useful because
 	// Limit and Offset are separate operators which result in separate calls to
 	// this function.
-	if l, ok := plan.(*limitNode); ok && l.countExpr == nil && offset == nil {
+	if l, ok := plan.(*limitNode); ok && l.countExpr == nil && offset == nil && step == nil {
 		l.countExpr = limit
 		return l, nil
 	}
+
+	// If we are only adding an offset to a limitNode, we can update
+	// the limitNode
+	//if l, ok := plan.(*limitNode); ok && l.countExpr == nil && l.offsetExpr == nil && step != nil {
+	//	l.stepExpr = step
+	//	return l, nil
+	//}
+
 	// If the input plan is a spoolNode, then propagate any constant limit to it.
 	if spool, ok := plan.(*spoolNode); ok {
 		if val, ok := limit.(*tree.DInt); ok {
@@ -748,8 +756,22 @@ func (ef *execFactory) ConstructLimit(
 		plan:       plan,
 		countExpr:  limit,
 		offsetExpr: offset,
+		stepExpr: step,
 	}, nil
 }
+
+// ConstructStep is part of the exec.Factory interface.
+func (ef *execFactory) ConstructStep(
+	input exec.Node, stepExpr tree.TypedExpr,
+) (exec.Node, error) {
+	plan := input.(planNode)
+
+	return &limitNode{
+		plan:       plan,
+		stepExpr:  stepExpr,
+	}, nil
+}
+
 
 // ConstructMax1Row is part of the exec.Factory interface.
 func (ef *execFactory) ConstructMax1Row(input exec.Node) (exec.Node, error) {

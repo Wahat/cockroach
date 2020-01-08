@@ -963,8 +963,69 @@ func (b *logicalPropsBuilder) buildLimitProps(limit *LimitExpr, rel *props.Relat
 	// Statistics
 	// ----------
 	if !b.disableStats {
-		b.sb.buildLimit(limit, rel)
+		//b.sb.buildLimit(limit, rel)
 	}
+}
+
+func (b *logicalPropsBuilder) buildStepProps(step *StepExpr, rel *props.Relational) {
+	BuildSharedProps(step, &rel.Shared)
+
+	inputProps := step.Input.Relational()
+
+	haveConstLimit := false
+	constStep := int64(math.MaxUint32)
+	if cnst, ok := step.Step.(*ConstExpr); ok {
+		haveConstLimit = true
+		constStep = int64(*cnst.Value.(*tree.DInt))
+	}
+
+	// Side Effects
+	// ------------
+	// Negative steps can trigger a runtime error.
+	if constStep < 0 || !haveConstLimit {
+		rel.CanHaveSideEffects = true
+	}
+
+	// Output Columns
+	// --------------
+	// Output columns are inherited from input.
+	rel.OutputCols = inputProps.OutputCols
+
+	// Not Null Columns
+	// ----------------
+	// Not null columns are inherited from input.
+	rel.NotNullCols = inputProps.NotNullCols
+
+	// Outer Columns
+	// -------------
+	// Outer columns were already derived by BuildSharedProps.
+
+	// Functional Dependencies
+	// -----------------------
+	// Inherit functional dependencies from input
+	rel.FuncDeps.CopyFrom(&inputProps.FuncDeps)
+
+	// Cardinality
+	// -----------
+	// Offset decreases the number of rows that are passed through from input.
+	//rel.Cardinality = inputProps.Cardinality
+	//if cnst, ok := step.Step.(*ConstExpr); ok {
+	//	constStep := int64(*cnst.Value.(*tree.DInt))
+	//	if constStep > 0 {
+	//		if constStep > math.MaxUint32 {
+	//			constStep = math.MaxUint32
+	//		}
+	//		//rel.Cardinality = inputProps.Cardinality.Step(uint32(constStep))
+	//		rel.Cardinality = props.AnyCardinality
+	//	}
+	//}
+	rel.Cardinality = inputProps.Cardinality
+
+	// Statistics
+	// ----------
+	//if !b.disableStats {
+	//	b.sb.buildStep(limit, rel)
+	//}
 }
 
 func (b *logicalPropsBuilder) buildOffsetProps(offset *OffsetExpr, rel *props.Relational) {

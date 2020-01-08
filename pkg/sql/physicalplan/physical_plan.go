@@ -674,13 +674,16 @@ func emptyPlan(types []types.T, node roachpb.NodeID) PhysicalPlan {
 //
 // For no limit, count should be MaxInt64.
 func (p *PhysicalPlan) AddLimit(
-	count int64, offset int64, exprCtx ExprContext, node roachpb.NodeID,
+	count int64, offset int64, step int64, exprCtx ExprContext, node roachpb.NodeID,
 ) error {
 	if count < 0 {
 		return errors.Errorf("negative limit")
 	}
 	if offset < 0 {
 		return errors.Errorf("negative offset")
+	}
+	if step < 0 {
+		return errors.Errorf("negative step")
 	}
 	// limitZero is set to true if the limit is a legitimate LIMIT 0 requested by
 	// the user. This needs to be tracked as a separate condition because DistSQL
@@ -740,7 +743,18 @@ func (p *PhysicalPlan) AddLimit(
 		if count != math.MaxInt64 && (post.Limit == 0 || post.Limit > uint64(count)) {
 			post.Limit = uint64(count)
 		}
-		p.SetLastStagePost(post, p.ResultTypes)
+
+		offsetPost := execinfrapb.PostProcessSpec{Offset: post.Offset}
+		limitPost := execinfrapb.PostProcessSpec{Limit: post.Limit}
+
+		p.SetLastStagePost(offsetPost, p.ResultTypes)
+
+		p.AddSingleGroupStage(
+			node,
+			execinfrapb.ProcessorCoreUnion{StepSpec: &execinfrapb.StepSpec{StepSize: uint32(step)}},
+			limitPost,
+			p.ResultTypes,
+		)
 		if limitZero {
 			if err := p.AddFilter(tree.DBoolFalse, exprCtx, nil); err != nil {
 				return err
@@ -759,7 +773,18 @@ func (p *PhysicalPlan) AddLimit(
 		localLimit := uint64(count + offset)
 		if post.Limit == 0 || post.Limit > localLimit {
 			post.Limit = localLimit
-			p.SetLastStagePost(post, p.ResultTypes)
+
+			offsetPost := execinfrapb.PostProcessSpec{Offset: post.Offset}
+			limitPost := execinfrapb.PostProcessSpec{Limit: post.Limit}
+
+			p.SetLastStagePost(offsetPost, p.ResultTypes)
+
+			p.AddSingleGroupStage(
+				node,
+				execinfrapb.ProcessorCoreUnion{StepSpec: &execinfrapb.StepSpec{StepSize: uint32(step)}},
+				limitPost,
+				p.ResultTypes,
+			)
 		}
 	}
 

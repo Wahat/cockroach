@@ -130,6 +130,13 @@ func (c Cardinality) Skip(rows uint32) Cardinality {
 	return Cardinality{Min: min, Max: max}
 }
 
+func (c Cardinality) Step(stepSize uint32) Cardinality {
+	min := c.Min
+	max := c.Max / stepSize
+
+	return Cardinality{Min: min, Max: max}
+}
+
 func (c Cardinality) String() string {
 	if c.Max == math.MaxUint32 {
 		return fmt.Sprintf("[%d - ]", c.Min)

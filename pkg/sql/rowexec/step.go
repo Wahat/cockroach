@@ -25,7 +25,8 @@ import (
 type stepProcessor struct {
 	execinfra.ProcessorBase
 	input execinfra.RowSource
-	stepSize int
+	stepSize uint32
+	count uint32
 }
 
 var _ execinfra.Processor = &stepProcessor{}
@@ -39,9 +40,9 @@ func newStepProcessor(
 	input execinfra.RowSource,
 	post *execinfrapb.PostProcessSpec,
 	output execinfra.RowReceiver,
-	stepSize int,
+	stepSize uint32,
 ) (*stepProcessor, error) {
-	s := &stepProcessor{input: input, stepSize: stepSize}
+	s := &stepProcessor{input: input, stepSize: stepSize, count: 0}
 	if err := s.Init(
 		s,
 		post,
@@ -72,24 +73,24 @@ func (s *stepProcessor) Next() (sqlbase.EncDatumRow, *execinfrapb.ProducerMetada
 			if meta.Err != nil {
 				s.MoveToDraining(nil /* err */)
 			}
-			// Skip next stepSize rows
-			for i:= 1; i < s.stepSize; i++ {
-				s.input.Next()
+
+			if s.count % s.stepSize == 0 {
+				s.count++
+				return nil, meta
 			}
-			return nil, meta
 		}
 		if row == nil {
 			s.MoveToDraining(nil /* err */)
 			break
 		}
 
-		if outRow := s.ProcessRowHelper(row); outRow != nil {
-			// Skip next stepSize rows
-			for i:= 1; i < s.stepSize; i++ {
-				s.input.Next()
+		if s.count % s.stepSize == 0 {
+			s.count++
+			if outRow := s.ProcessRowHelper(row); outRow != nil {
+				return outRow, nil
 			}
-			return outRow, nil
 		}
+		s.count++
 	}
 	return nil, s.DrainHelper()
 }

@@ -6277,6 +6277,22 @@ select_limit:
       $$.val.(*tree.Limit).LimitAll = $2.limit().LimitAll
     }
   }
+| limit_clause step_clause
+  {
+    if $1.limit() == nil {
+      $$.val = $2.limit()
+    } else {
+      $$.val = $1.limit()
+      $$.val.(*tree.Limit).Step = $2.limit().Step
+    }
+  }
+| offset_clause step_clause
+  {
+    $$.val = $1.limit()
+    if $2.limit() != nil {
+      $$.val.(*tree.Limit).Step = $2.limit().Step
+    }
+  }
 | limit_clause offset_clause
   {
     if $1.limit() == nil {

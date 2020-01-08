@@ -150,7 +150,7 @@ func TestStepProcessor(t *testing.T) {
 			//input := execinfra.NewRepeatableRowSource(cols, c.input)
 			input := distsqlutils.NewRowBuffer(sqlbase.TwoIntCols, c.input, distsqlutils.RowBufferArgs{})
 
-			s, err := newStepProcessor(flowCtx, 0 /* processorID */, input, &execinfrapb.PostProcessSpec{}, out, c.stepSize)
+			s, err := newStepProcessor(flowCtx, 0 /* processorID */, input, &execinfrapb.PostProcessSpec{}, out, uint32(c.stepSize))
 			if err != nil {
 				t.Fatal(err)
 			}

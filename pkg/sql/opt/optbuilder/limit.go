@@ -11,6 +11,7 @@
 package optbuilder
 
 import (
+	"fmt"
 	"github.com/cockroachdb/cockroach/pkg/sql/opt/memo"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/sql/types"
@@ -30,6 +31,15 @@ func (b *Builder) buildLimit(limit *tree.Limit, parentScope, inScope *scope) {
 		)
 		inScope.expr = b.factory.ConstructOffset(input, offset, inScope.makeOrderingChoice())
 	}
+
+	if limit.Step != nil {
+		input := inScope.expr.(memo.RelExpr)
+		step := b.resolveAndBuildScalar(
+			limit.Step, types.Int, "STEP", tree.RejectSpecial, parentScope,
+		)
+		inScope.expr = b.factory.ConstructStep(input, step, inScope.makeOrderingChoice())
+	}
+
 	if limit.Count != nil {
 		input := inScope.expr.(memo.RelExpr)
 		limit := b.resolveAndBuildScalar(
@@ -37,4 +47,5 @@ func (b *Builder) buildLimit(limit *tree.Limit, parentScope, inScope *scope) {
 		)
 		inScope.expr = b.factory.ConstructLimit(input, limit, inScope.makeOrderingChoice())
 	}
+	fmt.Println(limit)
 }

@@ -1179,10 +1179,15 @@ select_clause ::=
 	| select_with_parens
 
 select_limit ::=
-	limit_clause offset_clause
+	limit_clause offset_clause step_clause
+	| offset_clause limit_clause step_clause
+	| limit_clause step_clause
+	| offset_clause step_clause
+	| limit_clause offset_clause
 	| offset_clause limit_clause
 	| limit_clause
 	| offset_clause
+	| step_clause
 
 set_rest_more ::=
 	generic_set
@@ -1586,6 +1591,9 @@ offset_clause ::=
 	'OFFSET' a_expr
 	| 'OFFSET' c_expr row_or_rows
 
+step_clause ::=
+	'STEP' a_expr
+
 generic_set ::=
 	var_name to_or_eq var_list
 
@@ -1707,6 +1715,7 @@ reserved_keyword ::=
 	| 'SELECT'
 	| 'SESSION_USER'
 	| 'SOME'
+	| 'STEP'
 	| 'SYMMETRIC'
 	| 'TABLE'
 	| 'THEN'

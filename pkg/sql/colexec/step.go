@@ -12,53 +12,42 @@ package colexec
 
 import (
 	"context"
-
 	"github.com/cockroachdb/cockroach/pkg/col/coldata"
 )
 
-// limitOp is an operator that implements limit, returning only the first n
-// tuples from its input.
-type limitOp struct {
+// stepOp is an operator that implements step, returning
+// every n rows
+type stepOp struct {
 	OneInputNode
 
-	limit uint64
+	stepSize uint64
 
-	// seen is the number of tuples seen so far.
-	seen uint64
-	// done is true if the limit has been reached.
-	done bool
+	// Track which rows to take
+	curr uint64
 }
 
-var _ Operator = &limitOp{}
+var _ Operator = &stepOp{}
 
 // NewLimitOp returns a new limit operator with the given limit.
-func NewLimitOp(input Operator, limit uint64) Operator {
-	c := &limitOp{
+func NewStepOp(input Operator, stepSize uint64) Operator {
+	c := &stepOp{
 		OneInputNode: NewOneInputNode(input),
-		limit:        limit,
+		stepSize:        stepSize,
 	}
 	return c
 }
 
-func (c *limitOp) Init() {
+func (c *stepOp) Init() {
 	c.input.Init()
 }
 
-func (c *limitOp) Next(ctx context.Context) coldata.Batch {
-	if c.done {
-		return coldata.ZeroBatch
-	}
+func (c *stepOp) Next(ctx context.Context) coldata.Batch {
 	bat := c.input.Next(ctx)
 	length := bat.Length()
 	if length == 0 {
 		return bat
 	}
-	newSeen := c.seen + uint64(length)
-	if newSeen >= c.limit {
-		c.done = true
-		bat.SetLength(uint16(c.limit - c.seen))
-		return bat
-	}
-	c.seen = newSeen
+
+	//selectionVec := bat.Selection()
 	return bat
 }
