@@ -12,6 +12,7 @@ package rowexec
 
 import (
 	"context"
+	"fmt"
 	"github.com/cockroachdb/cockroach/pkg/testutils/distsqlutils"
 	"github.com/cockroachdb/cockroach/pkg/util/leaktest"
 	"testing"
@@ -126,17 +127,15 @@ func TestStepProcessor(t *testing.T) {
 		},
 		{
 			stepSize: 20,
-			input: sqlbase.EncDatumRows{},
+			input:    sqlbase.EncDatumRows{},
 			expected: sqlbase.EncDatumRows{},
-			},
-		}
-
+		},
+	}
 
 	for _, c := range testCases {
 		t.Run("", func(t *testing.T) {
 
 			out := &distsqlutils.RowBuffer{}
-
 
 			st := cluster.MakeTestingClusterSettings()
 			evalCtx := tree.MakeTestingEvalContext(st)
@@ -170,6 +169,42 @@ func TestStepProcessor(t *testing.T) {
 
 			if result := res.String(sqlbase.TwoIntCols); result != c.expected.String(sqlbase.TwoIntCols) {
 				t.Errorf("invalid results: %s, expected %s'", result, c.expected.String(sqlbase.TwoIntCols))
+			}
+		})
+	}
+}
+
+func BenchmarkStep(b *testing.B) {
+	const numRows = 1 << 16
+
+	ctx := context.Background()
+	st := cluster.MakeTestingClusterSettings()
+	evalCtx := tree.MakeTestingEvalContext(st)
+	defer evalCtx.Stop(ctx)
+
+	flowCtx := &execinfra.FlowCtx{
+		Cfg:     &execinfra.ServerConfig{Settings: st},
+		EvalCtx: &evalCtx,
+	}
+	post := &execinfrapb.PostProcessSpec{}
+	disposer := &execinfra.RowDisposer{}
+	for _, numCols := range []int{1, 1 << 1, 1 << 2, 1 << 4, 1 << 8} {
+		b.Run(fmt.Sprintf("cols=%d", numCols), func(b *testing.B) {
+			cols := make([]types.T, numCols)
+			for i := range cols {
+				cols[i] = *types.Int
+			}
+			input := execinfra.NewRepeatableRowSource(cols, sqlbase.MakeIntRows(numRows, numCols))
+
+			b.SetBytes(int64(8 * numRows * numCols))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				d, err := newStepProcessor(flowCtx, 0 /* processorID */, input, post, disposer, 5)
+				if err != nil {
+					b.Fatal(err)
+				}
+				d.Run(context.Background())
+				input.Reset()
 			}
 		})
 	}

@@ -11,6 +11,9 @@
 package colexec
 
 import (
+	"context"
+	"github.com/cockroachdb/cockroach/pkg/col/coldata"
+	"github.com/cockroachdb/cockroach/pkg/col/coltypes"
 	"testing"
 
 	"github.com/cockroachdb/cockroach/pkg/util/leaktest"
@@ -19,27 +22,27 @@ import (
 func TestStep(t *testing.T) {
 	defer leaktest.AfterTest(t)()
 	tcs := []struct {
-		stepSize    uint64
+		stepSize uint64
 		tuples   []tuple
 		expected []tuple
 	}{
 		{
-			stepSize:    1,
+			stepSize: 1,
 			tuples:   tuples{{1}},
 			expected: tuples{{1}},
 		},
 		{
-			stepSize:    100000,
+			stepSize: 100000,
 			tuples:   tuples{{1}, {2}, {3}, {4}},
 			expected: tuples{{1}},
 		},
 		{
-			stepSize:    2,
+			stepSize: 2,
 			tuples:   tuples{{1}, {2}, {3}, {4}},
 			expected: tuples{{1}, {3}},
 		},
 		{
-			stepSize:    3,
+			stepSize: 3,
 			tuples:   tuples{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}},
 			expected: tuples{{1}, {4}, {7}, {10}},
 		},
@@ -51,5 +54,21 @@ func TestStep(t *testing.T) {
 		runTestsWithoutAllNullsInjection(t, []tuples{tc.tuples}, nil /* typs */, tc.expected, orderedVerifier, func(input []Operator) (Operator, error) {
 			return NewStepOp(input[0], tc.stepSize), nil
 		})
+	}
+}
+
+func BenchmarkStepOp(b *testing.B) {
+	ctx := context.Background()
+	batch := testAllocator.NewMemBatch([]coltypes.T{coltypes.Int64, coltypes.Int64, coltypes.Int64})
+	batch.SetLength(coldata.BatchSize())
+	source := NewRepeatableBatchSource(batch)
+	source.Init()
+
+	o := NewStepOp(source, 5)
+	// Set throughput proportional to size of the selection vector.
+	b.SetBytes(int64(2 * coldata.BatchSize()))
+	for i := 0; i < b.N; i++ {
+		o.(*stepOp).Reset()
+		o.Next(ctx)
 	}
 }

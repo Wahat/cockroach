@@ -1069,7 +1069,7 @@ func (b *logicalPropsBuilder) buildOffsetProps(offset *OffsetExpr, rel *props.Re
 	// Statistics
 	// ----------
 	if !b.disableStats {
-		b.sb.buildOffset(offset, rel)
+		//b.sb.buildOffset(offset, rel)
 	}
 }
 
