@@ -189,7 +189,9 @@ func checkPrivilegeForSetZoneConfig(ctx context.Context, p *planner, zs tree.Zon
 			return nil
 		}
 
-		return zoneConfigPrivilegeErr
+		return pgerror.Newf(pgcode.InsufficientPrivilege,
+			"user %s does not have %s privilege on %s %s",
+			p.SessionData().User, fmt.Sprintf("%s or %s", privilege.ZONECONFIG, privilege.CREATE), dbDesc.TypeName(), dbDesc.GetName())
 	}
 	tableDesc, err := p.resolveTableForZone(ctx, &zs)
 	if err != nil {

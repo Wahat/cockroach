@@ -715,7 +715,7 @@ user testuser
 statement error only users with the admin role are allowed to alter system ranges
 ALTER RANGE default CONFIGURE ZONE USING num_replicas = 3
 
-statement error pq: user testuser does not have ZONECONFIG privilege on database auth
+statement error pq: user testuser does not have ZONECONFIG or CREATE privilege on database auth
 ALTER DATABASE auth CONFIGURE ZONE USING num_replicas = 3
 
 statement error pq: only users with the admin role are allowed to alter system tables
@@ -752,7 +752,7 @@ REVOKE CREATE ON DATABASE auth from testuser
 
 user testuser
 
-statement error pq: user testuser does not have ZONECONFIG privilege on database auth
+statement error pq: user testuser does not have ZONECONFIG or CREATE privilege on database auth
 ALTER DATABASE auth CONFIGURE ZONE USING num_replicas = 3
 
 user root
