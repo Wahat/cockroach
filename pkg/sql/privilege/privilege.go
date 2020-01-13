@@ -52,7 +52,7 @@ func (k Kind) Mask() uint32 {
 
 // ByValue is just an array of privilege kinds sorted by value.
 var ByValue = [...]Kind{
-	ALL, CREATE, DROP, GRANT, SELECT, INSERT, DELETE, UPDATE,
+	ALL, CREATE, DROP, GRANT, SELECT, INSERT, DELETE, UPDATE, ZONECONFIG,
 }
 
 // ByName is a map of string -> kind value.

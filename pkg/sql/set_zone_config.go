@@ -182,21 +182,14 @@ func checkPrivilegeForSetZoneConfig(ctx context.Context, p *planner, zs tree.Zon
 			return err
 		}
 		createPrivilegeErr := p.CheckPrivilege(ctx, dbDesc, privilege.CREATE)
-		zoneconfigPrivilegeErr := p.CheckPrivilege(ctx, dbDesc, privilege.ZONECONFIG)
+		zoneConfigPrivilegeErr := p.CheckPrivilege(ctx, dbDesc, privilege.ZONECONFIG)
 
 		// Can set ZoneConfig if user has either CREATE privilege or ZONECONFIG privilege
-		if zoneconfigPrivilegeErr == nil || createPrivilegeErr == nil {
+		if zoneConfigPrivilegeErr == nil || createPrivilegeErr == nil {
 			return nil
 		}
 
-		if zoneconfigPrivilegeErr != nil {
-			return zoneconfigPrivilegeErr
-		}
-
-		if createPrivilegeErr != nil {
-			return createPrivilegeErr
-		}
-
+		return zoneConfigPrivilegeErr
 	}
 	tableDesc, err := p.resolveTableForZone(ctx, &zs)
 	if err != nil {
