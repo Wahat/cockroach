@@ -172,6 +172,7 @@ func checkPrivilegeForSetZoneConfig(ctx context.Context, p *planner, zs tree.Zon
 	if zs.NamedZone != "" {
 		return p.RequireAdminRole(ctx, "alter system ranges")
 	}
+	// At database level, either needs ZONECONFIG or CREATE privilege
 	if zs.Database != "" {
 		if zs.Database == "system" {
 			return p.RequireAdminRole(ctx, "alter the system database")
@@ -180,7 +181,22 @@ func checkPrivilegeForSetZoneConfig(ctx context.Context, p *planner, zs tree.Zon
 		if err != nil {
 			return err
 		}
-		return p.CheckPrivilege(ctx, dbDesc, privilege.CREATE)
+		createPrivilegeErr := p.CheckPrivilege(ctx, dbDesc, privilege.CREATE)
+		zoneconfigPrivilegeErr := p.CheckPrivilege(ctx, dbDesc, privilege.ZONECONFIG)
+
+		// Can set ZoneConfig if user has either CREATE privilege or ZONECONFIG privilege
+		if zoneconfigPrivilegeErr == nil || createPrivilegeErr == nil {
+			return nil
+		}
+
+		if zoneconfigPrivilegeErr != nil {
+			return zoneconfigPrivilegeErr
+		}
+
+		if createPrivilegeErr != nil {
+			return createPrivilegeErr
+		}
+
 	}
 	tableDesc, err := p.resolveTableForZone(ctx, &zs)
 	if err != nil {

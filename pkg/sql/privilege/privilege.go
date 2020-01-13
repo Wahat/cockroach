@@ -36,6 +36,7 @@ const (
 	INSERT
 	DELETE
 	UPDATE
+	ZONECONFIG
 )
 
 // Predefined sets of privileges.
@@ -56,14 +57,15 @@ var ByValue = [...]Kind{
 
 // ByName is a map of string -> kind value.
 var ByName = map[string]Kind{
-	"ALL":    ALL,
-	"CREATE": CREATE,
-	"DROP":   DROP,
-	"GRANT":  GRANT,
-	"SELECT": SELECT,
-	"INSERT": INSERT,
-	"DELETE": DELETE,
-	"UPDATE": UPDATE,
+	"ALL":        ALL,
+	"CREATE":     CREATE,
+	"DROP":       DROP,
+	"GRANT":      GRANT,
+	"SELECT":     SELECT,
+	"INSERT":     INSERT,
+	"DELETE":     DELETE,
+	"UPDATE":     UPDATE,
+	"ZONECONFIG": ZONECONFIG,
 }
 
 // List is a list of privileges.
