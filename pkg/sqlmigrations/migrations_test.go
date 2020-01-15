@@ -550,6 +550,30 @@ func TestCreateSystemTable(t *testing.T) {
 	}
 }
 
+func TestAlterSystemUsers(t *testing.T) {
+	defer leaktest.AfterTest(t)()
+	ctx := context.Background()
+
+	mt := makeMigrationTest(ctx, t)
+	defer mt.close(ctx)
+
+	migration := mt.pop(t, "add hasCreateRole column to system.users table")
+	mt.start(t, base.TestServerArgs{})
+
+	// Create a user named "admin". We have to do a manual insert as "CREATE USER"
+	// knows about "isRole" and "hasCreateRole", but the migration hasn't run yet.
+	mt.sqlDB.Exec(t, `INSERT INTO system.users (username, "hashedPassword") VALUES ($1, '')`,
+		sqlbase.AdminRole)
+
+	if err := mt.runMigration(ctx, migration); err != nil {
+		t.Errorf("expected success, got %q", err)
+	}
+
+	// Verify hasCreateRole column was created
+	mt.sqlDB.Exec(t, `INSERT INTO system.users (username, "hashedPassword", "isRole", "hasCreateRole") VALUES ($1, '', false, false)`,
+		sqlbase.AdminRole)
+}
+
 func TestAdminUserExists(t *testing.T) {
 	defer leaktest.AfterTest(t)()
 	ctx := context.Background()
@@ -557,7 +581,7 @@ func TestAdminUserExists(t *testing.T) {
 	mt := makeMigrationTest(ctx, t)
 	defer mt.close(ctx)
 
-	migration := mt.pop(t, "add system.users isRole column and create admin role")
+	migration := mt.pop(t, "add isRole and hasCreateRole to admin role in system.users table")
 	mt.start(t, base.TestServerArgs{})
 
 	// Create a user named "admin". We have to do a manual insert as "CREATE USER"

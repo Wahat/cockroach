@@ -281,3 +281,34 @@ func (p *planner) resolveMemberOfWithAdminOption(
 
 	return ret, nil
 }
+
+func (p *planner) HasCreateRolePrivilege(ctx context.Context) error {
+	user := p.SessionData().User
+
+	if user == security.RootUser || user == security.NodeUser {
+		return nil
+	}
+
+	normalizedName, err := NormalizeAndValidateUsername(user)
+	if err != nil {
+		return err
+	}
+
+	hasCreateRoleRows, err := p.ExecCfg().InternalExecutor.Query(
+		ctx, "hasCreateRole", p.Txn(),
+		`SELECT * FROM system.users users JOIN system.role_members roles ON 
+users.username = roles.role WHERE "hasCreateRole" = true AND member = $1 LIMIT 1`,
+		normalizedName)
+
+	if err != nil {
+		return err
+	}
+
+	if len(hasCreateRoleRows) != 0 {
+		return nil
+	}
+
+	// User is not a member of a role that has CREATEROLE privilege.
+	return pgerror.Newf(pgcode.InsufficientPrivilege,
+		"user %s does not have CREATEROLE privilege", user)
+}
