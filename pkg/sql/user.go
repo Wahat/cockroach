@@ -97,6 +97,7 @@ func retrieveUserAndPassword(
 
 	// Perform the lookup with a timeout.
 	err = runFn(func(ctx context.Context) error {
+		// TODO(richardjcai): May need to change this to show users that have ability to login?
 		const getHashedPassword = `SELECT "hashedPassword" FROM system.users ` +
 			`WHERE username=$1`
 		values, err := ie.QueryRowEx(

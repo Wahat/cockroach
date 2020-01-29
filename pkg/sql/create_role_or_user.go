@@ -145,13 +145,7 @@ func (n *CreateUserNode) startExec(params runParams) error {
 			msg, normalizedUsername)
 	}
 
-	roleOptionBits, err := n.roleOptions.ToBitField()
-	if err != nil {
-		return err
-	}
-
-	canLogin := roleOptionBits&roleoption.LOGIN.Mask() != 0 ||
-		(roleOptionBits&roleoption.NOLOGIN.Mask() == 0 && !n.isRole)
+	hasCreateRole := n.roleOptions.Contains(roleoption.CREATEROLE)
 
 	n.run.rowsAffected, err = params.extendedEvalCtx.ExecCfg.InternalExecutor.Exec(
 		params.ctx,
@@ -245,6 +239,10 @@ func (p *planner) getUserAuthInfo(nameE tree.Expr, passwordE tree.Expr, ctx stri
 			return userAuthInfo{}, err
 		}
 	}
+<<<<<<< HEAD:pkg/sql/create_role_or_user.go
+=======
+	// TODO(richardjcai) cleanup password stuff, confirm this works.
+>>>>>>> 8da177ca6a... Refactor:pkg/sql/create_user.go
 	//var password func() (bool, string, error)
 	//
 	//if passwordValue != nil {
