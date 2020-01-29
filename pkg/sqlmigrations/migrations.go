@@ -299,6 +299,12 @@ var backwardCompatibleMigrations = []migrationDescriptor{
 		name:   "set isRole and hasCreateRole for admin role in system.users table",
 		workFn: addAdminRoleWithHasCreateRole,
 	},
+	{
+		// Introduced in v20.1.
+		name:                "add login column to system.users as inverted value of isRole column",
+		workFn:              addLoginColumnInSystemUsers,
+		includedInBootstrap: cluster.VersionByKey(cluster.VersionCreateRolePrivilege),
+	},
 }
 
 func staticIDs(ids ...sqlbase.ID) func(ctx context.Context, db db) ([]sqlbase.ID, error) {
@@ -391,6 +397,32 @@ func (r runner) execAsRootWithRetry(
 	var err error
 	for retry := retry.Start(retry.Options{MaxRetries: 5}); retry.Next(); {
 		err := r.execAsRoot(ctx, opName, stmt, qargs...)
+		if err == nil {
+			break
+		}
+		log.Warningf(ctx, "failed to run %s: %v", stmt, err)
+	}
+	return err
+}
+
+func (r runner) execAsNode(ctx context.Context, opName, stmt string, qargs ...interface{}) error {
+	_, err := r.sqlExecutor.ExecEx(ctx, opName, nil, /* txn */
+		sqlbase.InternalExecutorSessionDataOverride{
+			User: security.NodeUser,
+		},
+		stmt, qargs...)
+	return err
+}
+
+func (r runner) execAsNodeWithRetry(
+	ctx context.Context, opName string, stmt string, qargs ...interface{},
+) error {
+	// Retry a limited number of times because returning an error and letting
+	// the node kill itself is better than holding the migration lease for an
+	// arbitrarily long time.
+	var err error
+	for retry := retry.Start(retry.Options{MaxRetries: 5}); retry.Next(); {
+		err := r.execAsNode(ctx, opName, stmt, qargs...)
 		if err == nil {
 			break
 		}
@@ -901,22 +933,23 @@ func addHasCreateRoleToSystemUsers(ctx context.Context, r runner) error {
 	const addHasCreateRoleColumn = `
           ALTER TABLE system.users ADD COLUMN IF NOT EXISTS "hasCreateRole" bool DEFAULT false
           `
+	return r.execAsNodeWithRetry(ctx, "addHasCreateRoleColumn", addHasCreateRoleColumn)
+}
 
-	var err error
+func addLoginColumnInSystemUsers(ctx context.Context, r runner) error {
+	const createLoginColumn = `
+					ALTER TABLE system.users ADD COLUMN IF NOT EXISTS login bool
+					`
+	const setLoginColumnValues = `
+					UPDATE system.users login = not "isRole" WHERE "isRole" IS NOT NULL
+					`
 
-	// Root user doesn't have CREATE privilege on system.users. Use node user.
-	for retry := retry.Start(retry.Options{MaxRetries: 5}); retry.Next(); {
-		_, err = r.sqlExecutor.ExecEx(ctx, "addHasCreateRoleColumn", nil, /* txn */
-			sqlbase.InternalExecutorSessionDataOverride{
-				User: security.NodeUser,
-			}, addHasCreateRoleColumn)
-		if err == nil {
-			break
-		}
-		log.Warningf(ctx, "failed to run %s: %v", addHasCreateRoleColumn, err)
+	err := r.execAsNodeWithRetry(ctx, "createLoginColumn", createLoginColumn)
+	if err != nil {
+		return err
 	}
 
-	return err
+	return r.execAsRootWithRetry(ctx, "setLoginColumnValues", setLoginColumnValues)
 }
 
 func disallowPublicUserOrRole(ctx context.Context, r runner) error {
