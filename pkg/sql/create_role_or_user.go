@@ -117,6 +117,7 @@ func (n *CreateUserNode) startExec(params runParams) error {
 		opName = "create-user"
 	}
 
+	// TODO(richardjcai): Handle role / user logic here?
 	// Check if the user/role exists.
 	row, err := params.extendedEvalCtx.ExecCfg.InternalExecutor.QueryRowEx(
 		params.ctx,

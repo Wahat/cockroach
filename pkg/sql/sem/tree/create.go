@@ -826,7 +826,7 @@ const (
 // TABLE/INDEX statement.
 type PartitionBy struct {
 	Fields NameList
-	// Exactly one of KindList or Range is required to be non-empty.
+	// Exactly one of List or Range is required to be non-empty.
 	List  []ListPartition
 	Range []RangePartition
 }

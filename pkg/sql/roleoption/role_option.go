@@ -11,7 +11,6 @@
 package roleoption
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/cockroachdb/cockroach/pkg/security"
 	"strconv"
@@ -89,41 +88,8 @@ func ToOption(str string) (Option, error) {
 	return ret, nil
 }
 
-// KindList is a list of role option kinds.
-type KindList []Option
-
 // RoleOptionList is a list of role options.
 type RoleOptionList []RoleOption
-
-func (pl KindList) Len() int {
-	return len(pl)
-}
-
-// names returns a list of role option names in the same
-// order as 'pl'.
-func (pl KindList) names() []string {
-	ret := make([]string, len(pl))
-	for i, p := range pl {
-		ret[i] = p.String()
-	}
-	return ret
-}
-
-// Format prints out the list in a buffer.
-// This keeps the existing order and uses " " as separator.
-func (pl KindList) Format(buf *bytes.Buffer) {
-	for i, p := range pl {
-		if i > 0 {
-			buf.WriteString(" ")
-		}
-
-		buf.WriteString(p.String())
-
-		//if p == PASSWORD {
-		//
-		//}
-	}
-}
 
 // CreateSetStmtFromRoleOptions returns a string of the form:
 // "SET "optionA" = true, "optionB" = false".
@@ -146,12 +112,6 @@ func (pl RoleOptionList) CreateSetStmt() (string, error) {
 	}
 
 	return setStmt, nil
-}
-
-// String implements the Stringer interface.
-// This keeps the existing order and uses " " as separator.
-func (pl KindList) String() string {
-	return strings.Join(pl.names(), " ")
 }
 
 // ToBitField returns the bitfield representation of

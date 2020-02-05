@@ -807,7 +807,7 @@ func (s *adminServer) Users(
 	if err != nil {
 		return nil, err
 	}
-	query := `SELECT username FROM system.users WHERE login = true`
+	query := `SELECT username FROM system.users WHERE "isRole" = false`
 	rows, err := s.server.internalExecutor.QueryEx(
 		ctx, "admin-users", nil, /* txn */
 		sqlbase.InternalExecutorSessionDataOverride{User: userName},

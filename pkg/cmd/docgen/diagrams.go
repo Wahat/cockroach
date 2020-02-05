@@ -349,15 +349,16 @@ var specs = []stmtSpec{
 		},
 		unlink: []string{"table_name"},
 	},
-	//{
-	//	name:   "alter_user_password_stmt",
-	//	inline: []string{"password_clause", "opt_with"},
-	//	replace: map[string]string{
-	//		"string_or_placeholder 'WITH'":      "name 'WITH'",
-	//		"string_or_placeholder  'PASSWORD'": "name 'PASSWORD'",
-	//		"'PASSWORD' string_or_placeholder":  "'PASSWORD' password"},
-	//	unlink: []string{"name", "password"},
-	//},
+	{
+		// TODO(richardjcai) update this after alter role/user is done
+		name:   "alter_role_or_user_stmt",
+		inline: []string{"password_clause", "opt_with"},
+		replace: map[string]string{
+			"string_or_placeholder 'WITH'":      "name 'WITH'",
+			"string_or_placeholder  'PASSWORD'": "name 'PASSWORD'",
+			"'PASSWORD' string_or_placeholder":  "'PASSWORD' password"},
+		unlink: []string{"name", "password"},
+	},
 	{
 		name:    "alter_sequence_options_stmt",
 		inline:  []string{"sequence_option_list", "sequence_option_elem"},
@@ -586,24 +587,14 @@ var specs = []stmtSpec{
 		name:   "create_view_stmt",
 		inline: []string{"opt_column_list"},
 	},
-	//{
-	//	name:   "create_role_stmt",
-	//	inline: []string{"role_or_group"},
-	//	replace: map[string]string{
-	//		"string_or_placeholder": "name",
-	//	},
-	//},
-	//// WIP Make sure to update this.
-	//{
-	//	name:   "create_user_stmt",
-	//	inline: []string{"opt_with", "password_clause"},
-	//	replace: map[string]string{
-	//		"'PASSWORD' string_or_placeholder": "'PASSWORD' password",
-	//		"'USER' string_or_placeholder":     "'USER' name",
-	//		"'EXISTS' string_or_placeholder":   "'EXISTS' name",
-	//	},
-	//	unlink: []string{"password"},
-	//},
+	{
+		// TODO(richardjcai) update this
+		name:   "create_role_or_user_stmt",
+		inline: []string{"role_or_group_or_user"},
+		replace: map[string]string{
+			"string_or_placeholder": "name",
+		},
+	},
 	{
 		name: "default_value_column_level",
 		stmt: "stmt_block",
