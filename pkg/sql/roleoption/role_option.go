@@ -40,6 +40,8 @@ const (
 	CREATEROLE
 	NOCREATEROLE
 	PASSWORD
+	LOGIN
+	NOLOGIN
 )
 
 // Mask returns the bitmask for a given role option.
@@ -52,6 +54,8 @@ var ByName = map[string]Option{
 	"CREATEROLE":   CREATEROLE,
 	"NOCREATEROLE": NOCREATEROLE,
 	"PASSWORD":     PASSWORD,
+	"LOGIN":        LOGIN,
+	"NOLOGIN":      NOLOGIN,
 }
 
 // toSQLColumn is a map of roleoption (Option) ->
@@ -137,8 +141,10 @@ func (rol List) CheckRoleOptionConflicts() error {
 		return err
 	}
 
-	if roleOptionBits&CREATEROLE.Mask() != 0 &&
-		roleOptionBits&NOCREATEROLE.Mask() != 0 {
+	if (roleOptionBits&CREATEROLE.Mask() != 0 &&
+		roleOptionBits&NOCREATEROLE.Mask() != 0) ||
+		(roleOptionBits&LOGIN.Mask() != 0 &&
+			roleOptionBits&NOLOGIN.Mask() != 0) {
 		return pgerror.Newf(pgcode.Syntax, "conflicting role options")
 	}
 	return nil
