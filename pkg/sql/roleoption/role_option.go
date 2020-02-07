@@ -64,6 +64,8 @@ var toSQLColumn = map[Option]string{
 	CREATEROLE:   "hasCreateRole",
 	NOCREATEROLE: "hasCreateRole",
 	PASSWORD:     "hashedPassword",
+	LOGIN:        "login",
+	NOLOGIN:      "login",
 }
 
 // toBool is a map of roleoption (Option) ->
@@ -71,6 +73,8 @@ var toSQLColumn = map[Option]string{
 var toBool = map[Option]bool{
 	CREATEROLE:   true,
 	NOCREATEROLE: false,
+	LOGIN:        true,
+	NOLOGIN:      false,
 }
 
 // ToOption takes a string and returns the corresponding Option.

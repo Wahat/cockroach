@@ -167,16 +167,19 @@ func (n *CreateUserNode) startExec(params runParams) error {
 	}
 
 	hasCreateRole := n.roleOptions.Contains(roleoption.CREATEROLE)
+	login := n.roleOptions.Contains(roleoption.LOGIN) ||
+		!n.roleOptions.Contains(roleoption.NOLOGIN) && !n.isRole
 
 	n.run.rowsAffected, err = params.extendedEvalCtx.ExecCfg.InternalExecutor.Exec(
 		params.ctx,
 		opName,
 		params.p.txn,
-		fmt.Sprintf("insert into %s values ($1, $2, $3, $4)", userTableName),
+		fmt.Sprintf("insert into %s values ($1, $2, $3, $4, $5)", userTableName),
 		normalizedUsername,
 		hashedPassword,
 		n.isRole,
 		hasCreateRole,
+		login,
 	)
 
 	if err != nil {

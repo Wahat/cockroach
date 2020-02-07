@@ -12,6 +12,7 @@ package sql
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/security"
@@ -96,8 +97,9 @@ func retrieveUserAndPassword(
 	}
 
 	// Perform the lookup with a timeout.
+	// TODO(richardjcai) what if login doesn't exist?
 	err = runFn(func(ctx context.Context) error {
-		const getHashedPassword = `SELECT "hashedPassword" FROM system.users ` +
+		const getHashedPassword = `SELECT "hashedPassword", login FROM system.users ` +
 			`WHERE username=$1`
 		values, err := ie.QueryRowEx(
 			ctx, "get-hashed-pwd", nil, /* txn */
@@ -109,6 +111,11 @@ func retrieveUserAndPassword(
 		if values != nil {
 			exists = true
 			hashedPassword = []byte(*(values[0].(*tree.DBytes)))
+			login := bool(tree.MustBeDBool(values[1]))
+			fmt.Sprintf("Login: %t", login)
+			if !login {
+				return errors.Newf("%s does not have login permission", normalizedUsername)
+			}
 		}
 		return nil
 	})
