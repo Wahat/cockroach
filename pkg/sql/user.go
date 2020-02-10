@@ -97,7 +97,7 @@ func retrieveUserAndPassword(
 	}
 
 	// Perform the lookup with a timeout.
-	// TODO(richardjcai) what if login doesn't exist?
+	// TODO(richardjcai) what if login column doesn't exist?
 	err = runFn(func(ctx context.Context) error {
 		const getHashedPassword = `SELECT "hashedPassword", login FROM system.users ` +
 			`WHERE username=$1`
@@ -112,7 +112,6 @@ func retrieveUserAndPassword(
 			exists = true
 			hashedPassword = []byte(*(values[0].(*tree.DBytes)))
 			login := bool(tree.MustBeDBool(values[1]))
-			fmt.Sprintf("Login: %t", login)
 			if !login {
 				return errors.Newf("%s does not have login permission", normalizedUsername)
 			}
