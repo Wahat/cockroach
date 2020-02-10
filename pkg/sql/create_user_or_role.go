@@ -93,6 +93,7 @@ func (n *CreateUserNode) startExec(params runParams) error {
 	}
 
 	var hashedPassword []byte
+	validUntil := "NULL"
 
 	for _, ro := range n.roleOptions {
 		if ro.Option == roleoption.PASSWORD {
@@ -108,6 +109,17 @@ func (n *CreateUserNode) startExec(params runParams) error {
 				return security.ErrEmptyPassword
 			}
 			hashedPassword, err = security.HashPassword(password)
+			if err != nil {
+				return err
+			}
+		}
+
+		if ro.Option == roleoption.VALIDUNTIL {
+			if ro.IsNull {
+				break
+			}
+
+			validUntil, err = ro.Value()
 			if err != nil {
 				return err
 			}
@@ -174,12 +186,13 @@ func (n *CreateUserNode) startExec(params runParams) error {
 		params.ctx,
 		opName,
 		params.p.txn,
-		fmt.Sprintf("insert into %s values ($1, $2, $3, $4, $5)", userTableName),
+		fmt.Sprintf("insert into %s values ($1, $2, $3, $4, $5, $6)", userTableName),
 		normalizedUsername,
 		hashedPassword,
 		n.isRole,
 		hasCreateRole,
 		login,
+		validUntil,
 	)
 
 	if err != nil {

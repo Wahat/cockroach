@@ -5192,9 +5192,9 @@ role_options:
 	}
 
 valid_until_clause:
-  VALID UNTIL const_datetime
+  VALID UNTIL string_or_placeholder
   {
-		option, err := roleoption.ToOption($1)
+		option, err := roleoption.ToOption($1 + " " +  $2)
 		if err != nil {
 			return setErr(sqllex, err)
 		}
@@ -5202,7 +5202,7 @@ valid_until_clause:
   }
 | VALID UNTIL NULL
   {
-		option, err := roleoption.ToOption($1)
+		option, err := roleoption.ToOption($1 + " " +  $2)
 		if err != nil {
 			return setErr(sqllex, err)
 		}

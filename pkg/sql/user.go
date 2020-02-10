@@ -54,6 +54,7 @@ func GetUserHashedPassword(
 ) (
 	exists bool,
 	pwRetrieveFn func(ctx context.Context) (hashedPassword []byte, err error),
+	validUntilFn func(ctx context.Context) (timestamp tree.DTimestampTZ, err error),
 	err error,
 ) {
 	normalizedUsername := tree.Name(username).Normalize()
@@ -64,21 +65,28 @@ func GetUserHashedPassword(
 		// immediately, and delay retrieving the password until strictly
 		// necessary.
 		rootFn := func(ctx context.Context) ([]byte, error) {
-			_, hashedPassword, err := retrieveUserAndPassword(ctx, ie, isRoot, normalizedUsername)
+			_, hashedPassword, _, err := retrieveUserAndPassword(ctx, ie, isRoot, normalizedUsername)
 			return hashedPassword, err
 		}
-		return true, rootFn, nil
+		// Root user cannot have password expiry
+		validUntilFn := func(ctx context.Context) (tree.DTimestampTZ, error) {
+			return tree.DTimestampTZ{Time: nil}, nil
+		}
+		return true, rootFn, validUntilFn, nil
 	}
 
 	// Other users must reach for system.users no matter what, because
 	// only that contains the truth about whether the user exists.
-	exists, hashedPassword, err := retrieveUserAndPassword(ctx, ie, isRoot, normalizedUsername)
-	return exists, func(ctx context.Context) ([]byte, error) { return hashedPassword, nil }, err
+	exists, hashedPassword, validUntil, err := retrieveUserAndPassword(ctx, ie, isRoot, normalizedUsername)
+	return exists,
+		func(ctx context.Context) ([]byte, error) { return hashedPassword, nil },
+		func(ctx context.Context) (tree.DTimestampTZ, error) { return validUntil, nil },
+		err
 }
 
 func retrieveUserAndPassword(
 	ctx context.Context, ie *InternalExecutor, isRoot bool, normalizedUsername string,
-) (exists bool, hashedPassword []byte, err error) {
+) (exists bool, hashedPassword []byte, validUntil tree.DTimestampTZ, err error) {
 	// We may be operating with a timeout.
 	timeout := userLoginTimeout.Get(&ie.s.cfg.Settings.SV)
 	// We don't like long timeouts for root.
@@ -111,9 +119,14 @@ func retrieveUserAndPassword(
 			exists = true
 			hashedPassword = []byte(*(values[0].(*tree.DBytes)))
 			login := bool(tree.MustBeDBool(values[1]))
+			validUntil = tree.DTimestampTZ{Time: nil}
+			if values[2] != nil {
+				validUntil = tree.MustBeDTimestampTZ(values[2])
+			}
 			if !login {
 				return errors.Newf("%s does not have login permission", normalizedUsername)
 			}
+
 		}
 		return nil
 	})
@@ -123,7 +136,7 @@ func retrieveUserAndPassword(
 		log.Warningf(ctx, "user lookup for %q failed: %v", normalizedUsername, err)
 		err = errors.HandledWithMessage(err, "internal error while retrieving user account")
 	}
-	return exists, hashedPassword, err
+	return exists, hashedPassword, validUntil, err
 }
 
 var userLoginTimeout = settings.RegisterPublicNonNegativeDurationSetting(

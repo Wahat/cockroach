@@ -255,7 +255,7 @@ WHERE id = $1`
 func (s *authenticationServer) verifyPassword(
 	ctx context.Context, username string, password string,
 ) (bool, error) {
-	exists, pwRetrieveFn, err := sql.GetUserHashedPassword(
+	exists, pwRetrieveFn, validUntilFn, err := sql.GetUserHashedPassword(
 		ctx, s.server.execCfg.InternalExecutor, username,
 	)
 	if err != nil {
@@ -268,7 +268,18 @@ func (s *authenticationServer) verifyPassword(
 	if err != nil {
 		return false, err
 	}
-	return (security.CompareHashAndPassword(hashedPassword, password) == nil), nil
+
+	validUntil, err := validUntilFn(ctx)
+	if err != nil {
+		return false, err
+	}
+	if validUntil.Time != time.Time(nil) {
+		if validUntil.Time.Sub(time.Now()) < 0 {
+			return false, nil
+		}
+	}
+
+	return security.CompareHashAndPassword(hashedPassword, password) == nil, nil
 }
 
 // CreateAuthSecret creates a secret, hash pair to populate a session auth token.

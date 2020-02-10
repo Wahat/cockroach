@@ -69,6 +69,7 @@ type AuthMethod func(
 	c AuthConn,
 	tlsState tls.ConnectionState,
 	pwRetrieveFn PasswordRetrievalFn,
+	pwValidUntilFn passwordValidUntilFn,
 	execCfg *sql.ExecutorConfig,
 	entry *hba.Entry,
 ) (security.UserAuthHook, error)
@@ -77,11 +78,14 @@ type AuthMethod func(
 // password for the user logging in.
 type PasswordRetrievalFn = func(context.Context) ([]byte, error)
 
+type passwordValidUntilFn = func(context.Context) (tree.DTimestampTZ, error)
+
 func authPassword(
 	ctx context.Context,
 	c AuthConn,
 	tlsState tls.ConnectionState,
 	pwRetrieveFn PasswordRetrievalFn,
+	pwValidUntilFn passwordValidUntilFn,
 	execCfg *sql.ExecutorConfig,
 	entry *hba.Entry,
 ) (security.UserAuthHook, error) {
@@ -100,6 +104,8 @@ func authPassword(
 	if err != nil {
 		return nil, err
 	}
+
+	validUntil, err := pwValidUntilFn(ctx)
 
 	return security.UserAuthPasswordHook(
 		false /*insecure*/, password, hashedPassword,

@@ -183,7 +183,7 @@ func (ro RoleOption) toSQLValue() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return value, nil
+		return fmt.Sprintf("'%s'", value), nil
 	}
 
 	return strconv.FormatBool(toBool[ro.Option]), nil
