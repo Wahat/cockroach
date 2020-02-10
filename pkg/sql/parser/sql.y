@@ -603,7 +603,7 @@ func newNameFromStr(s string) *tree.Name {
 %token <str> TRACING
 
 %token <str> UNBOUNDED UNCOMMITTED UNION UNIQUE UNKNOWN UNLOGGED UNSPLIT
-%token <str> UPDATE UPSERT USE USER USERS USING UUID
+%token <str> UPDATE UPSERT UNTIL USE USER USERS USING UUID
 
 %token <str> VALID VALIDATE VALUE VALUES VARBIT VARCHAR VARIADIC VIEW VARYING VIRTUAL
 
@@ -837,7 +837,7 @@ func newNameFromStr(s string) *tree.Name {
 
 %type <str> name opt_name opt_name_parens opt_to_savepoint
 %type <str> privilege savepoint_name
-%type <tree.OptionWithValue> role_option password_clause
+%type <tree.OptionWithValue> role_option password_clause valid_until_clause
 %type <tree.Operator> subquery_op
 %type <*tree.UnresolvedName> func_name
 %type <str> opt_collate
@@ -5177,6 +5177,7 @@ role_option:
 		$$.val = tree.OptionWithValue{RoleOption: option, Value: nil}
 	}
   | password_clause
+  | valid_until_clause
 
 role_options:
 	role_option
@@ -5188,6 +5189,24 @@ role_options:
 	| role_options role_option
 	{
 		$$.val = append($1.roleOptionWithValueList(), $2.roleOptionWithValue())
+	}
+
+valid_until_clause:
+  VALID UNTIL const_datetime
+  {
+		option, err := roleoption.ToOption($1)
+		if err != nil {
+			return setErr(sqllex, err)
+		}
+		$$.val = tree.OptionWithValue{RoleOption: option, Value: $3.expr()}
+  }
+| VALID UNTIL NULL
+  {
+		option, err := roleoption.ToOption($1)
+		if err != nil {
+			return setErr(sqllex, err)
+		}
+		$$.val = tree.OptionWithValue{RoleOption: option, Value: tree.DNull}
 	}
 
 opt_view_recursive:
@@ -9893,6 +9912,7 @@ unreserved_keyword:
 | UNKNOWN
 | UNLOGGED
 | UNSPLIT
+| UNTIL
 | UPDATE
 | UPSERT
 | UUID

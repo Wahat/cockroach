@@ -42,6 +42,7 @@ const (
 	PASSWORD
 	LOGIN
 	NOLOGIN
+	VALIDUNTIL
 )
 
 // Mask returns the bitmask for a given role option.
@@ -56,6 +57,7 @@ var ByName = map[string]Option{
 	"PASSWORD":     PASSWORD,
 	"LOGIN":        LOGIN,
 	"NOLOGIN":      NOLOGIN,
+	"VALID UNTIL":  VALIDUNTIL,
 }
 
 // toSQLColumn is a map of roleoption (Option) ->
@@ -66,6 +68,7 @@ var toSQLColumn = map[Option]string{
 	PASSWORD:     "hashedPassword",
 	LOGIN:        "login",
 	NOLOGIN:      "login",
+	VALIDUNTIL:   "validUntil",
 }
 
 // toBool is a map of roleoption (Option) ->

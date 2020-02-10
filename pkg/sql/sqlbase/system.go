@@ -72,6 +72,7 @@ CREATE TABLE system.users (
   "isRole"         BOOL NOT NULL DEFAULT false,
   "hasCreateRole"  BOOL NOT NULL DEFAULT false,
 	login						 BOOL NOT NULL DEFAULT true
+	"validUntil"		 TIMESTAMP
 );`
 
 	// Zone settings per DB/Table.
@@ -431,17 +432,19 @@ var (
 			{Name: "isRole", ID: 3, Type: *types.Bool, DefaultExpr: &falseBoolString},
 			{Name: "hasCreateRole", ID: 4, Type: *types.Bool, DefaultExpr: &falseBoolString},
 			{Name: "login", ID: 5, Type: *types.Bool, DefaultExpr: &trueBoolString},
+			{Name: "validUntil", ID: 6, Type: *types.Timestamp, Nullable: true},
 		},
-		NextColumnID: 6,
+		NextColumnID: 7,
 		Families: []ColumnFamilyDescriptor{
 			{Name: "primary", ID: 0, ColumnNames: []string{"username"}, ColumnIDs: singleID1},
 			{Name: "fam_2_hashedPassword", ID: 2, ColumnNames: []string{"hashedPassword"}, ColumnIDs: []ColumnID{2}, DefaultColumnID: 2},
 			{Name: "fam_3_isRole", ID: 3, ColumnNames: []string{"isRole"}, ColumnIDs: []ColumnID{3}, DefaultColumnID: 3},
 			{Name: "fam_4_hasCreateRole", ID: 4, ColumnNames: []string{"hasCreateRole"}, ColumnIDs: []ColumnID{4}, DefaultColumnID: 4},
 			{Name: "fam_5_login", ID: 5, ColumnNames: []string{"login"}, ColumnIDs: []ColumnID{5}, DefaultColumnID: 5},
+			{Name: "fam_6_validUntil", ID: 6, ColumnNames: []string{"validUntil"}, ColumnIDs: []ColumnID{6}, DefaultColumnID: 6},
 		},
 		PrimaryIndex:   pk("username"),
-		NextFamilyID:   6,
+		NextFamilyID:   7,
 		NextIndexID:    2,
 		Privileges:     NewCustomSuperuserPrivilegeDescriptor(SystemAllowedPrivileges[keys.UsersTableID]),
 		FormatVersion:  InterleavedFormatVersion,
