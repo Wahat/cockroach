@@ -54,7 +54,7 @@ func GetUserHashedPassword(
 ) (
 	exists bool,
 	pwRetrieveFn func(ctx context.Context) (hashedPassword []byte, err error),
-	validUntilFn func(ctx context.Context) (timestamp tree.DTimestampTZ, err error),
+	validUntilFn func(ctx context.Context) (timestamp *tree.DTimestampTZ, err error),
 	err error,
 ) {
 	normalizedUsername := tree.Name(username).Normalize()
@@ -69,8 +69,8 @@ func GetUserHashedPassword(
 			return hashedPassword, err
 		}
 		// Root user cannot have password expiry
-		validUntilFn := func(ctx context.Context) (tree.DTimestampTZ, error) {
-			return tree.DTimestampTZ{Time: nil}, nil
+		validUntilFn := func(ctx context.Context) (*tree.DTimestampTZ, error) {
+			return nil, nil
 		}
 		return true, rootFn, validUntilFn, nil
 	}
@@ -80,13 +80,13 @@ func GetUserHashedPassword(
 	exists, hashedPassword, validUntil, err := retrieveUserAndPassword(ctx, ie, isRoot, normalizedUsername)
 	return exists,
 		func(ctx context.Context) ([]byte, error) { return hashedPassword, nil },
-		func(ctx context.Context) (tree.DTimestampTZ, error) { return validUntil, nil },
+		func(ctx context.Context) (*tree.DTimestampTZ, error) { return validUntil, nil },
 		err
 }
 
 func retrieveUserAndPassword(
 	ctx context.Context, ie *InternalExecutor, isRoot bool, normalizedUsername string,
-) (exists bool, hashedPassword []byte, validUntil tree.DTimestampTZ, err error) {
+) (exists bool, hashedPassword []byte, validUntil *tree.DTimestampTZ, err error) {
 	// We may be operating with a timeout.
 	timeout := userLoginTimeout.Get(&ie.s.cfg.Settings.SV)
 	// We don't like long timeouts for root.
@@ -106,7 +106,7 @@ func retrieveUserAndPassword(
 	// Perform the lookup with a timeout.
 	// TODO(richardjcai) what if login column doesn't exist?
 	err = runFn(func(ctx context.Context) error {
-		const getHashedPassword = `SELECT "hashedPassword", login FROM system.users ` +
+		const getHashedPassword = `SELECT "hashedPassword", login, "validUntil" FROM system.users ` +
 			`WHERE username=$1`
 		values, err := ie.QueryRowEx(
 			ctx, "get-hashed-pwd", nil, /* txn */
@@ -119,9 +119,11 @@ func retrieveUserAndPassword(
 			exists = true
 			hashedPassword = []byte(*(values[0].(*tree.DBytes)))
 			login := bool(tree.MustBeDBool(values[1]))
-			validUntil = tree.DTimestampTZ{Time: nil}
+			validUntil = nil
 			if values[2] != nil {
-				validUntil = tree.MustBeDTimestampTZ(values[2])
+				validUntilTS := tree.MustBeDTimestampTZ(values[2])
+				log.Warningf(ctx, "valid until: %s", validUntilTS)
+				validUntil = &validUntilTS
 			}
 			if !login {
 				return errors.Newf("%s does not have login permission", normalizedUsername)

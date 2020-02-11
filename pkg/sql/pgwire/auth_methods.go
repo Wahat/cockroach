@@ -15,12 +15,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-
 	"github.com/cockroachdb/cockroach/pkg/security"
 	"github.com/cockroachdb/cockroach/pkg/settings/cluster"
 	"github.com/cockroachdb/cockroach/pkg/sql"
 	"github.com/cockroachdb/cockroach/pkg/sql/pgwire/hba"
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
+	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/errors"
 )
 
@@ -78,7 +78,7 @@ type AuthMethod func(
 // password for the user logging in.
 type PasswordRetrievalFn = func(context.Context) ([]byte, error)
 
-type passwordValidUntilFn = func(context.Context) (tree.DTimestampTZ, error)
+type passwordValidUntilFn = func(context.Context) (*tree.DTimestampTZ, error)
 
 func authPassword(
 	ctx context.Context,
@@ -106,6 +106,15 @@ func authPassword(
 	}
 
 	validUntil, err := pwValidUntilFn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if validUntil != nil {
+		log.Warning(ctx, validUntil.Time)
+		//if validUntil.Time.Sub(time.Now()) < 0 {
+		//	return nil, err
+		//}
+	}
 
 	return security.UserAuthPasswordHook(
 		false /*insecure*/, password, hashedPassword,
@@ -124,9 +133,10 @@ func authCert(
 	_ context.Context,
 	_ AuthConn,
 	tlsState tls.ConnectionState,
-	pwRetrieveFn PasswordRetrievalFn,
-	execCfg *sql.ExecutorConfig,
-	entry *hba.Entry,
+	_ PasswordRetrievalFn,
+	_ passwordValidUntilFn,
+	_ *sql.ExecutorConfig,
+	_ *hba.Entry,
 ) (security.UserAuthHook, error) {
 	if len(tlsState.PeerCertificates) == 0 {
 		return nil, errors.New("no TLS peer certificates, but required for auth")
@@ -143,6 +153,7 @@ func authCertPassword(
 	c AuthConn,
 	tlsState tls.ConnectionState,
 	pwRetrieveFn PasswordRetrievalFn,
+	pwValidUntilFn passwordValidUntilFn,
 	execCfg *sql.ExecutorConfig,
 	entry *hba.Entry,
 ) (security.UserAuthHook, error) {
@@ -152,7 +163,7 @@ func authCertPassword(
 	} else {
 		fn = authCert
 	}
-	return fn(ctx, c, tlsState, pwRetrieveFn, execCfg, entry)
+	return fn(ctx, c, tlsState, pwRetrieveFn, pwValidUntilFn, execCfg, entry)
 }
 
 func authTrust(
@@ -160,6 +171,7 @@ func authTrust(
 	_ AuthConn,
 	_ tls.ConnectionState,
 	_ PasswordRetrievalFn,
+	_ passwordValidUntilFn,
 	_ *sql.ExecutorConfig,
 	_ *hba.Entry,
 ) (security.UserAuthHook, error) {
@@ -171,6 +183,7 @@ func authReject(
 	_ AuthConn,
 	_ tls.ConnectionState,
 	_ PasswordRetrievalFn,
+	_ passwordValidUntilFn,
 	_ *sql.ExecutorConfig,
 	_ *hba.Entry,
 ) (security.UserAuthHook, error) {

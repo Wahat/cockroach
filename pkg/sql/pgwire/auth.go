@@ -99,7 +99,8 @@ func (c *conn) handleAuthentication(
 	}
 
 	// Ask the method to authenticate.
-	authenticationHook, err := methodFn(ctx, ac, tlsState, pwRetrievalFn, execCfg, hbaEntry)
+	authenticationHook, err := methodFn(ctx, ac, tlsState, pwRetrievalFn,
+		validUntilFn, execCfg, hbaEntry)
 	if err != nil {
 		return sendError(err)
 	}

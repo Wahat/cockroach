@@ -273,7 +273,7 @@ func (s *authenticationServer) verifyPassword(
 	if err != nil {
 		return false, err
 	}
-	if validUntil.Time != time.Time(nil) {
+	if validUntil != nil {
 		if validUntil.Time.Sub(time.Now()) < 0 {
 			return false, nil
 		}
