@@ -72,7 +72,7 @@ CREATE TABLE system.users (
   "isRole"         BOOL NOT NULL DEFAULT false,
   "hasCreateRole"  BOOL NOT NULL DEFAULT false,
 	login						 BOOL NOT NULL DEFAULT true
-	"validUntil"		 TIMESTAMP
+	"validUntil"		 TIMESTAMPTZ
 );`
 
 	// Zone settings per DB/Table.
@@ -432,7 +432,7 @@ var (
 			{Name: "isRole", ID: 3, Type: *types.Bool, DefaultExpr: &falseBoolString},
 			{Name: "hasCreateRole", ID: 4, Type: *types.Bool, DefaultExpr: &falseBoolString},
 			{Name: "login", ID: 5, Type: *types.Bool, DefaultExpr: &trueBoolString},
-			{Name: "validUntil", ID: 6, Type: *types.Timestamp, Nullable: true},
+			{Name: "validUntil", ID: 6, Type: *types.TimestampTZ, Nullable: true},
 		},
 		NextColumnID: 7,
 		Families: []ColumnFamilyDescriptor{

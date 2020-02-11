@@ -93,7 +93,7 @@ func (n *CreateUserNode) startExec(params runParams) error {
 	}
 
 	var hashedPassword []byte
-	validUntil := "NULL"
+	var validUntil interface{}
 
 	for _, ro := range n.roleOptions {
 		if ro.Option == roleoption.PASSWORD {

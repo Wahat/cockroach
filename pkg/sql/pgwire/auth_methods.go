@@ -22,6 +22,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/sql/sem/tree"
 	"github.com/cockroachdb/cockroach/pkg/util/log"
 	"github.com/cockroachdb/errors"
+	"time"
 )
 
 // This file contains the methods that are accepted to perform
@@ -83,11 +84,11 @@ type passwordValidUntilFn = func(context.Context) (*tree.DTimestampTZ, error)
 func authPassword(
 	ctx context.Context,
 	c AuthConn,
-	tlsState tls.ConnectionState,
+	_ tls.ConnectionState,
 	pwRetrieveFn PasswordRetrievalFn,
 	pwValidUntilFn passwordValidUntilFn,
-	execCfg *sql.ExecutorConfig,
-	entry *hba.Entry,
+	_ *sql.ExecutorConfig,
+	_ *hba.Entry,
 ) (security.UserAuthHook, error) {
 	if err := c.SendAuthRequest(authCleartextPassword, nil /* data */); err != nil {
 		return nil, err
@@ -111,9 +112,9 @@ func authPassword(
 	}
 	if validUntil != nil {
 		log.Warning(ctx, validUntil.Time)
-		//if validUntil.Time.Sub(time.Now()) < 0 {
-		//	return nil, err
-		//}
+		if validUntil.Time.Sub(time.Now()) < 0 {
+			return nil, errors.New("password is expired")
+		}
 	}
 
 	return security.UserAuthPasswordHook(

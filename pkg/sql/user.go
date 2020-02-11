@@ -119,16 +119,16 @@ func retrieveUserAndPassword(
 			exists = true
 			hashedPassword = []byte(*(values[0].(*tree.DBytes)))
 			login := bool(tree.MustBeDBool(values[1]))
-			validUntil = nil
-			if values[2] != nil {
-				validUntilTS := tree.MustBeDTimestampTZ(values[2])
-				log.Warningf(ctx, "valid until: %s", validUntilTS)
-				validUntil = &validUntilTS
-			}
 			if !login {
 				return errors.Newf("%s does not have login permission", normalizedUsername)
 			}
 
+			validUntil = nil
+			if values[2] != tree.DNull {
+				validUntilTS := tree.MustBeDTimestampTZ(values[2])
+				log.Warningf(ctx, "valid until: %s", validUntilTS.Time)
+				validUntil = &validUntilTS
+			}
 		}
 		return nil
 	})
